@@ -4,6 +4,13 @@ import { useNavigate, useOutletContext, useParams } from "react-router";
 import { motion } from "motion/react";
 import { apiFetch } from "../lib/api";
 import { StatusBadge } from "./StudentDashboard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 type ReportDetailData = {
   code: string;
@@ -33,6 +40,29 @@ export const ReportDetail: React.FC = () => {
   const { role } = useOutletContext<{ role: string }>();
   const { id } = useParams();
   const [report, setReport] = useState<ReportDetailData | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const updateStatus = async (newStatus: string) => {
+    if (!id || !report) return;
+    setIsUpdating(true);
+    try {
+      const response = await apiFetch<{ data: ReportDetailData }>(`/reports/${report.code}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setReport(response.data);
+    } catch (error) {
+      console.error("Gagal memperbarui status", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (window.confirm("Apakah Anda yakin ingin membatalkan laporan ini?")) {
+      updateStatus("Cancelled");
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -162,6 +192,24 @@ export const ReportDetail: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
             <h4 className="font-bold text-gray-900 mb-6">Status Laporan</h4>
+            
+            {role === "technician" && report?.status !== "Cancelled" && report?.status !== "Completed" && (
+              <div className="mb-6">
+                <Select value={report?.status} onValueChange={updateStatus} disabled={isUpdating}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih status baru" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                    <SelectItem value="Verified">Verified</SelectItem>
+                    <SelectItem value="Assigned">Assigned</SelectItem>
+                    <SelectItem value="Repairing">Repairing</SelectItem>
+                    <SelectItem value="Completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="space-y-0 relative">
               {timeline.map((step, i) => (
                 <div key={step.status} className="flex gap-4 min-h-[70px]">
@@ -185,9 +233,20 @@ export const ReportDetail: React.FC = () => {
               ))}
             </div>
 
-            <button className="w-full mt-6 py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-bold text-gray-400 hover:border-red-200 hover:text-red-500 transition-all">
-              Batalkan Laporan
-            </button>
+            {report?.status !== "Cancelled" && report?.status !== "Completed" && (
+              <button 
+                onClick={handleCancel}
+                disabled={isUpdating}
+                className="w-full mt-6 py-3 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-bold text-gray-400 hover:border-red-200 hover:text-red-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                Batalkan Laporan
+              </button>
+            )}
+            
+            {report?.status === "Cancelled" && (
+               <div className="w-full mt-6 py-3 border border-red-100 bg-red-50 rounded-2xl text-center text-sm font-bold text-red-600">
+                 Laporan Dibatalkan
+               </div>
+            )}
           </div>
 
           <div className="bg-orange-50 p-6 rounded-3xl border border-orange-100">
