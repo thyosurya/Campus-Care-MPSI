@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { ArrowLeft, Camera, Upload } from "lucide-react";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
@@ -8,13 +8,41 @@ import { apiFetch, getStoredAuth } from "../lib/api";
 export const ReportForm: React.FC = () => {
   const navigate = useNavigate();
   const auth = getStoredAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
   const [category, setCategory] = useState("Air Conditioner");
   const [building, setBuilding] = useState("Gedung A (Rektorat)");
   const [room, setRoom] = useState("Ruang 304");
   const [title, setTitle] = useState("AC Tidak Dingin");
   const [description, setDescription] = useState("AC di ruang kelas tidak mengeluarkan udara dingin.");
+
+  const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("Ukuran file terlalu besar", {
+        description: "Maksimal upload 2 MB.",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : null;
+      setPreview(result);
+      setUploadedFileName(file.name);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,16 +93,12 @@ export const ReportForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700">Foto Kerusakan</label>
-          <div
-            className={`relative h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden ${
-              preview ? "border-blue-500" : "border-gray-300 hover:border-blue-400 bg-gray-50"
-            }`}
-            onClick={() => {
-              setPreview(
-                "https://images.unsplash.com/photo-1718203862467-c33159fdc504?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhaXIlMjBjb25kaXRpb25lciUyMHVuaXR8ZW58MXx8fHwxNzgwODkyMzg4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-              );
-            }}
-          >
+            <div
+              className={`relative h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden ${
+                preview ? "border-blue-500" : "border-gray-300 hover:border-blue-400 bg-gray-50"
+              }`}
+              onClick={() => fileInputRef.current?.click()}
+            >
             {preview ? (
               <>
                 <img src={preview} alt="Preview" className="w-full h-full object-cover" />
@@ -90,7 +114,19 @@ export const ReportForm: React.FC = () => {
                   <Upload className="w-8 h-8 text-blue-600" />
                 </div>
                 <p className="text-gray-900 font-semibold">Klik untuk ambil foto atau unggah</p>
-                <p className="text-sm text-gray-500 mt-1">Format JPG, PNG (Maks. 5MB)</p>
+                <p className="text-sm text-gray-500 mt-1">Format JPG, PNG (Maks. 2MB)</p>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {uploadedFileName && (
+              <div className="absolute bottom-3 left-3 right-3 rounded-2xl bg-white/90 backdrop-blur px-3 py-2 text-xs font-medium text-gray-700 shadow-sm">
+                {uploadedFileName}
               </div>
             )}
           </div>
