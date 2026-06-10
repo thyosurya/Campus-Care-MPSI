@@ -15,10 +15,12 @@ import {
   LogOut
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { clearStoredAuth, getStoredAuth } from "../lib/api";
 
 export const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const storedAuth = getStoredAuth();
   
   // Robust role detection based on the path segments
   const pathParts = location.pathname.split('/').filter(Boolean);
@@ -54,6 +56,8 @@ export const Layout: React.FC = () => {
   };
 
   const navItems = getNavItems();
+  const userName = storedAuth?.user.name ?? "Budi Santoso";
+  const userRole = storedAuth?.user.role ?? role;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
@@ -95,12 +99,15 @@ export const Layout: React.FC = () => {
               className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">Budi Santoso</p>
-              <p className="text-xs text-gray-500 truncate capitalize">{role}</p>
+              <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+              <p className="text-xs text-gray-500 truncate capitalize">{userRole}</p>
             </div>
           </div>
           <button 
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              clearStoredAuth();
+              navigate('/login');
+            }}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-all"
           >
             <LogOut className="w-4 h-4" />

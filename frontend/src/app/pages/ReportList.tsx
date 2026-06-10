@@ -1,53 +1,51 @@
-import React, { useState } from "react";
-import { Search, Filter, Calendar, MapPin, ChevronRight, SlidersHorizontal } from "lucide-react";
-import { useNavigate } from "react-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { Search, Calendar, MapPin, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { useNavigate, useOutletContext } from "react-router";
 import { motion } from "motion/react";
+import { apiFetch } from "../lib/api";
 import { StatusBadge } from "./StudentDashboard";
 
-const ALL_REPORTS = [
-  {
-    id: "REP-001",
-    title: "AC Tidak Dingin",
-    location: "Gedung A, Ruang 302",
-    status: "Repairing",
-    date: "8 Juni 2026",
-    category: "Air Conditioner",
-    image: "https://images.unsplash.com/photo-1718203862467-c33159fdc504?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhaXIlMjBjb25kaXRpb25lciUyMHVuaXR8ZW58MXx8fHwxNzgwODkyMzg4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  {
-    id: "REP-002",
-    title: "Proyektor Berkedip",
-    location: "Gedung B, Lab Komputer 1",
-    status: "Pending",
-    date: "7 Juni 2026",
-    category: "Projector",
-    image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdWx0aW1lZGlhJTIwcHJvamVjdG9yJTIwY2xhc3Nyb29tfGVufDF8fHx8MTc4MDg5MjM5MHww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  {
-    id: "REP-003",
-    title: "Kursi Patah",
-    location: "Gedung C, Ruang 204",
-    status: "Completed",
-    date: "5 Juni 2026",
-    category: "Furniture",
-    image: "https://images.unsplash.com/photo-1770827693775-5458df828bd9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx1bml2ZXJzaXR5JTIwY2FtcHVzJTIwYnVpbGRpbmclMjBjbGVhbiUyMG1vZGVybnxlbnwxfHx8fDE3ODA4OTIzODZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  {
-    id: "REP-004",
-    title: "Lampu Padam",
-    location: "Gedung D, Lorong Lantai 2",
-    status: "Verified",
-    date: "4 Juni 2026",
-    category: "Electricity",
-    image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtdWx0aW1lZGlhJTIwcHJvamVjdG9yJTIwY2xhc3Nyb29tfGVufDF8fHx8MTc4MDg5MjM5MHww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-];
+type ReportItem = {
+  code: string;
+  title: string;
+  location: string;
+  status: string;
+  reported_at?: string;
+  category: string;
+  image_url?: string | null;
+};
 
 export const ReportList: React.FC = () => {
   const navigate = useNavigate();
+  const { role } = useOutletContext<{ role: string }>();
   const [activeTab, setActiveTab] = useState("Semua");
+  const [search, setSearch] = useState("");
+  const [reports, setReports] = useState<ReportItem[]>([]);
 
   const tabs = ["Semua", "Menunggu", "Dalam Proses", "Selesai"];
+
+  useEffect(() => {
+    const params: Record<string, string> = {};
+
+    if (activeTab === "Menunggu") params.status = "Pending";
+    if (activeTab === "Dalam Proses") params.status = "Repairing";
+    if (activeTab === "Selesai") params.status = "Completed";
+
+    apiFetch<{ data: ReportItem[] }>("/reports", { query: params })
+      .then((response) => setReports(response.data))
+      .catch(() => setReports([]));
+  }, [activeTab]);
+
+  const filteredReports = useMemo(() => {
+    return reports.filter((report) => {
+      const query = search.toLowerCase();
+      return (
+        report.title.toLowerCase().includes(query) ||
+        report.location.toLowerCase().includes(query) ||
+        report.category.toLowerCase().includes(query)
+      );
+    });
+  }, [reports, search]);
 
   return (
     <div className="space-y-6">
@@ -56,9 +54,11 @@ export const ReportList: React.FC = () => {
         <div className="flex gap-2">
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Cari laporan..." 
+            <input
+              type="text"
+              placeholder="Cari laporan..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             />
           </div>
@@ -68,15 +68,14 @@ export const ReportList: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all whitespace-nowrap ${
-              activeTab === tab 
-                ? "bg-blue-600 text-white shadow-md shadow-blue-100" 
+              activeTab === tab
+                ? "bg-blue-600 text-white shadow-md shadow-blue-100"
                 : "bg-white text-gray-500 border border-gray-100 hover:bg-gray-50"
             }`}
           >
@@ -85,25 +84,30 @@ export const ReportList: React.FC = () => {
         ))}
       </div>
 
-      {/* List */}
       <div className="grid grid-cols-1 gap-4">
-        {ALL_REPORTS.map((report, i) => (
+        {filteredReports.map((report, i) => (
           <motion.div
-            key={report.id}
+            key={report.code}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
-            onClick={() => navigate(`/report/${report.id}`)}
+            onClick={() => navigate(`/${role}/report/${report.code}`)}
             className="group bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:border-blue-200 transition-all cursor-pointer flex items-center gap-4"
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0">
-              <img src={report.image} alt={report.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+              <img
+                src={report.image_url ?? "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"}
+                alt={report.title}
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+              />
             </div>
-            
+
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <StatusBadge status={report.status} />
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">{report.category}</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hidden sm:inline">
+                  {report.category}
+                </span>
               </div>
               <h4 className="font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">{report.title}</h4>
               <div className="flex flex-wrap gap-y-1 gap-x-4 mt-1">
@@ -113,7 +117,7 @@ export const ReportList: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1 text-xs text-gray-500">
                   <Calendar className="w-3 h-3 text-gray-400" />
-                  <span>{report.date}</span>
+                  <span>{report.reported_at ? new Date(report.reported_at).toLocaleDateString("id-ID") : "-"}</span>
                 </div>
               </div>
             </div>
@@ -123,16 +127,11 @@ export const ReportList: React.FC = () => {
         ))}
       </div>
 
-      {/* Pagination Placeholder */}
-      <div className="flex justify-center pt-4">
-        <div className="flex gap-2">
-          {[1, 2, 3].map((n) => (
-            <button key={n} className={`w-8 h-8 rounded-lg text-xs font-bold ${n === 1 ? "bg-blue-600 text-white" : "bg-white text-gray-500 border border-gray-200"}`}>
-              {n}
-            </button>
-          ))}
+      {filteredReports.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+          <p className="text-gray-500">Tidak ada laporan yang ditemukan.</p>
         </div>
-      </div>
+      )}
     </div>
   );
 };

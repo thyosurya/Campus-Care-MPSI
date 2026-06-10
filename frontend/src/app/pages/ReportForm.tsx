@@ -1,32 +1,59 @@
 import React, { useState } from "react";
-import { ArrowLeft, Camera, Upload, CheckCircle } from "lucide-react";
-import { NavLink, useNavigate } from "react-router";
+import { ArrowLeft, Camera, Upload } from "lucide-react";
+import { useNavigate } from "react-router";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { apiFetch, getStoredAuth } from "../lib/api";
 
 export const ReportForm: React.FC = () => {
   const navigate = useNavigate();
+  const auth = getStoredAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [category, setCategory] = useState("Air Conditioner");
+  const [building, setBuilding] = useState("Gedung A (Rektorat)");
+  const [room, setRoom] = useState("Ruang 304");
+  const [title, setTitle] = useState("AC Tidak Dingin");
+  const [description, setDescription] = useState("AC di ruang kelas tidak mengeluarkan udara dingin.");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
+
+    try {
+      await apiFetch("/reports", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          description,
+          category,
+          location: `${building}, ${room}`,
+          image_url: preview,
+          reporter_name: auth?.user.name ?? "Budi Santoso",
+          reporter_email: auth?.user.email ?? "student@campus.test",
+        }),
+      });
+
       toast.success("Laporan berhasil dikirim!", {
         description: "Teknisi akan segera memverifikasi laporan Anda.",
       });
-      navigate("/student");
-    }, 2000);
+      navigate("/student/reports");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gagal mengirim laporan");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto pb-10">
       <div className="flex items-center gap-4 mb-8">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
         >
@@ -36,16 +63,16 @@ export const ReportForm: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Photo Upload Area */}
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700">Foto Kerusakan</label>
-          <div 
+          <div
             className={`relative h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden ${
               preview ? "border-blue-500" : "border-gray-300 hover:border-blue-400 bg-gray-50"
             }`}
             onClick={() => {
-              // Simulating file pick
-              setPreview("https://images.unsplash.com/photo-1718203862467-c33159fdc504?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhaXIlMjBjb25kaXRpb25lciUyMHVuaXR8ZW58MXx8fHwxNzgwODkyMzg4fDA&ixlib=rb-4.1.0&q=80&w=1080");
+              setPreview(
+                "https://images.unsplash.com/photo-1718203862467-c33159fdc504?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBhaXIlMjBjb25kaXRpb25lciUyMHVuaXR8ZW58MXx8fHwxNzgwODkyMzg4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+              );
             }}
           >
             {preview ? (
@@ -69,29 +96,34 @@ export const ReportForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Category & Location */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">Kategori Fasilitas</label>
-            <select className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none" required>
-              <option value="">Pilih Kategori</option>
-              <option value="ac">Air Conditioner (AC)</option>
-              <option value="proyektor">Proyektor</option>
-              <option value="kursi">Kursi / Meja</option>
-              <option value="komputer">Komputer / Jaringan</option>
-              <option value="listrik">Listrik / Lampu</option>
-              <option value="lainnya">Lainnya</option>
+            <select
+              className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+              required
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="Air Conditioner">Air Conditioner (AC)</option>
+              <option value="Projector">Proyektor</option>
+              <option value="Furniture">Kursi / Meja</option>
+              <option value="Computer">Komputer / Jaringan</option>
+              <option value="Electricity">Listrik / Lampu</option>
+              <option value="Other">Lainnya</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">Prioritas</label>
             <div className="flex gap-2">
-              {['Rendah', 'Sedang', 'Tinggi'].map((p) => (
+              {["Rendah", "Sedang", "Tinggi"].map((p) => (
                 <button
                   key={p}
                   type="button"
                   className={`flex-1 py-3 rounded-2xl text-sm font-semibold border transition-all ${
-                    p === 'Sedang' ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-gray-200 text-gray-600 hover:border-blue-200'
+                    p === "Sedang"
+                      ? "bg-blue-50 border-blue-200 text-blue-600"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-blue-200"
                   }`}
                 >
                   {p}
@@ -104,38 +136,55 @@ export const ReportForm: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">Gedung</label>
-            <select className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none" required>
-              <option value="">Pilih Gedung</option>
-              <option value="A">Gedung A (Rektorat)</option>
-              <option value="B">Gedung B (Teknik)</option>
-              <option value="C">Gedung C (Sains)</option>
-              <option value="D">Gedung D (Ekonomi)</option>
-              <option value="E">Gedung E (Kedokteran)</option>
+            <select
+              className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all appearance-none"
+              required
+              value={building}
+              onChange={(e) => setBuilding(e.target.value)}
+            >
+              <option value="Gedung A (Rektorat)">Gedung A (Rektorat)</option>
+              <option value="Gedung B (Teknik)">Gedung B (Teknik)</option>
+              <option value="Gedung C (Sains)">Gedung C (Sains)</option>
+              <option value="Gedung D (Ekonomi)">Gedung D (Ekonomi)</option>
+              <option value="Gedung E (Kedokteran)">Gedung E (Kedokteran)</option>
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-gray-700">Ruangan</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder="Contoh: Ruang 304 atau Lab 1"
               className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               required
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Description */}
+        <div className="space-y-2">
+          <label className="text-sm font-semibold text-gray-700">Judul Laporan</label>
+          <input
+            type="text"
+            className="w-full p-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-semibold text-gray-700">Deskripsi Kerusakan</label>
-          <textarea 
+          <textarea
             rows={4}
             placeholder="Jelaskan detail kerusakan yang terjadi..."
             className="w-full p-4 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none"
             required
-          ></textarea>
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={isSubmitting}
