@@ -1,68 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Bell, Clock, CheckCircle2, AlertCircle, Wrench, Info, MessageSquare } from "lucide-react";
 import { motion } from "motion/react";
 import { useOutletContext } from "react-router";
+import { apiFetch } from "../lib/api";
+
+type NotificationItem = {
+  id: number;
+  title: string;
+  body: string;
+  read: boolean;
+  time: string;
+};
 
 export const NotificationPage: React.FC = () => {
   const { role } = useOutletContext<{ role: string }>();
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
-  const notifications = [
-    {
-      id: 1,
-      title: "Laporan Terverifikasi",
-      desc: "Laporan kerusakan AC di Gedung C telah disetujui dan diteruskan ke teknisi.",
-      type: "success",
-      icon: CheckCircle2,
-      time: "10 menit yang lalu",
-      for: ["student", "admin"]
-    },
-    {
-      id: 2,
-      title: "Tugas Baru Ditugaskan",
-      desc: "Anda memiliki tugas baru untuk perbaikan lampu di Gedung D.",
-      type: "warning",
-      icon: Wrench,
-      time: "1 jam yang lalu",
-      for: ["technician"]
-    },
-    {
-      id: 3,
-      title: "Pembaruan Status",
-      desc: "Teknisi sedang menuju lokasi untuk perbaikan proyektor di Lab 3.",
-      type: "info",
-      icon: Info,
-      time: "3 jam yang lalu",
-      for: ["student"]
-    },
-    {
-      id: 4,
-      title: "Sistem Maintenance",
-      desc: "Aplikasi akan mengalami pemeliharaan rutin pada pukul 23:00 WIB.",
-      type: "alert",
-      icon: AlertCircle,
-      time: "Yesterday",
-      for: ["student", "technician", "admin"]
-    },
-    {
-      id: 5,
-      title: "Komentar Baru",
-      desc: "Admin memberikan catatan tambahan pada laporan REP-042.",
-      type: "message",
-      icon: MessageSquare,
-      time: "Yesterday",
-      for: ["student", "technician"]
-    }
-  ].filter(n => n.for.includes(role));
+  useEffect(() => {
+    apiFetch<{ data: NotificationItem[] }>("/notifications", { query: { role } })
+      .then((response) => setNotifications(response.data))
+      .catch(() => setNotifications([]));
+  }, [role]);
 
-  const getTypeStyles = (type: string) => {
-    switch (type) {
-      case "success": return "bg-green-50 text-green-600";
-      case "warning": return "bg-orange-50 text-orange-600";
-      case "alert": return "bg-red-50 text-red-600";
-      case "message": return "bg-indigo-50 text-indigo-600";
-      default: return "bg-blue-50 text-blue-600";
+  const getTypeStyles = (index: number) => {
+    switch (index % 4) {
+      case 0: return "bg-green-50 text-green-600";
+      case 1: return "bg-orange-50 text-orange-600";
+      case 2: return "bg-red-50 text-red-600";
+      default: return "bg-indigo-50 text-indigo-600";
     }
   };
+
+  const icons = [CheckCircle2, Wrench, Info, MessageSquare];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -78,29 +47,33 @@ export const NotificationPage: React.FC = () => {
 
       <div className="space-y-3">
         {notifications.length > 0 ? (
-          notifications.map((n, i) => (
-            <motion.div
-              key={n.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex gap-4 hover:border-blue-200 transition-all cursor-pointer group"
-            >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${getTypeStyles(n.type)}`}>
-                <n.icon className="w-6 h-6" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="font-bold text-gray-900">{n.title}</h4>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
-                    <Clock className="w-3 h-3" />
-                    {n.time}
-                  </div>
+          notifications.map((n, i) => {
+            const Icon = icons[i % icons.length];
+
+            return (
+              <motion.div
+                key={n.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex gap-4 hover:border-blue-200 transition-all cursor-pointer group"
+              >
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${getTypeStyles(i)}`}>
+                  <Icon className="w-6 h-6" />
                 </div>
-                <p className="text-sm text-gray-500 leading-relaxed">{n.desc}</p>
-              </div>
-            </motion.div>
-          ))
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <h4 className="font-bold text-gray-900">{n.title}</h4>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
+                      <Clock className="w-3 h-3" />
+                      {n.time}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed">{n.body}</p>
+                </div>
+              </motion.div>
+            );
+          })
         ) : (
           <div className="text-center py-20 bg-white rounded-[2rem] border border-dashed border-gray-200">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
