@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate, Outlet, useLocation } from "react-router";
+import { Navigate, Outlet, useLocation, useOutletContext } from "react-router";
 import { getStoredAuth } from "../lib/api";
 
 type RequireRoleProps = {
@@ -9,6 +9,7 @@ type RequireRoleProps = {
 export const RequireRole: React.FC<RequireRoleProps> = ({ allowedRole }) => {
   const location = useLocation();
   const auth = getStoredAuth();
+  const parentContext = useOutletContext<{ role: string }>();
 
   if (!auth) {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
@@ -18,5 +19,5 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ allowedRole }) => {
     return <Navigate to={`/${auth.user.role}`} replace />;
   }
 
-  return <Outlet />;
+  return <Outlet context={parentContext} />;
 };
