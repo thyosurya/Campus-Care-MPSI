@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { Layout } from "./components/Layout";
+import { RequireRole } from "./components/RequireRole";
 import { StudentDashboard } from "./pages/StudentDashboard";
 import { TechnicianDashboard } from "./pages/TechnicianDashboard";
 import { AdminDashboard } from "./pages/AdminDashboard";
@@ -31,6 +32,7 @@ export const router = createBrowserRouter([
       // Grouping pages that use the same Layout
       {
         path: "student",
+        element: <RequireRole allowedRole="student" />,
         children: [
           { index: true, Component: StudentDashboard },
           { path: "reports", Component: ReportList },
@@ -42,6 +44,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "technician",
+        element: <RequireRole allowedRole="technician" />,
         children: [
           { index: true, Component: TechnicianDashboard },
           { path: "reports", Component: ReportList },
@@ -52,6 +55,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "admin",
+        element: <RequireRole allowedRole="admin" />,
         children: [
           { index: true, Component: AdminDashboard },
           { path: "reports", Component: ReportList },
