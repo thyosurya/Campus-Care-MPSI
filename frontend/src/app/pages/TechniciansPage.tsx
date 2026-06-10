@@ -1,15 +1,41 @@
 import React from "react";
-import { User, Shield, Star, Phone, Mail, MoreHorizontal, Plus, Search } from "lucide-react";
-import { motion } from "motion/react";
+import { User, Star, MoreHorizontal, Plus, Search } from "lucide-react";
+import { apiFetch } from "../lib/api";
 
-const TECHNICIANS = [
-  { id: 1, name: "Ahmad Subarjo", specialty: "Kelistrikan", status: "Active", rating: 4.8, tasks: 5, avatar: "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw0fHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3ODA4OTIzOTF8MA&ixlib=rb-4.1.0&q=80&w=1080" },
-  { id: 2, name: "Siti Aminah", specialty: "Pendingin Ruangan", status: "On Duty", rating: 4.9, tasks: 2, avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHx3b21hbiUyMHBvcnRyYWl0fGVufDF8fHx8MTc4MDg5MjM5MHww&ixlib=rb-4.1.0&q=80&w=1080" },
-  { id: 3, name: "Bambang Pamungkas", specialty: "IT & Jaringan", status: "Active", rating: 4.7, tasks: 8, avatar: "https://images.unsplash.com/photo-1566492031773-4f4e44671857?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHw2fHxtYW4lMjBwb3J0cmFpdHxlbnwxfHx8fDE3ODA4OTIzOTF8MA&ixlib=rb-4.1.0&q=80&w=1080" },
-  { id: 4, name: "Rina Wijaya", specialty: "Fasilitas Umum", status: "Away", rating: 4.6, tasks: 0, avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHBvcnRyYWl0fGVufDF8fHx8MTc4MDg5MjM5MHww&ixlib=rb-4.1.0&q=80&w=1080" },
-];
+type TechnicianItem = {
+  id: number;
+  name: string;
+  specialty: string;
+  status: "Active" | "On Duty" | "Away";
+  rating: number;
+  tasks: number;
+  avatar?: string;
+};
+
+const STATUS_DOT: Record<TechnicianItem["status"], string> = {
+  Active: "bg-green-500",
+  "On Duty": "bg-blue-500",
+  Away: "bg-gray-400",
+};
 
 export const TechniciansPage: React.FC = () => {
+  const [technicians, setTechnicians] = React.useState<TechnicianItem[]>([]);
+  const [search, setSearch] = React.useState("");
+
+  React.useEffect(() => {
+    apiFetch<{ data: TechnicianItem[] }>("/technicians")
+      .then((response) => setTechnicians(response.data))
+      .catch(() => setTechnicians([]));
+  }, []);
+
+  const filteredTechnicians = technicians.filter((tech) => {
+    const q = search.toLowerCase();
+    return (
+      tech.name.toLowerCase().includes(q) ||
+      tech.specialty.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -28,6 +54,8 @@ export const TechniciansPage: React.FC = () => {
         <input
           type="text"
           placeholder="Cari nama atau spesialisasi..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
         />
       </div>
@@ -46,11 +74,15 @@ export const TechniciansPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {TECHNICIANS.map((tech) => (
+              {filteredTechnicians.length > 0 ? filteredTechnicians.map((tech) => (
                 <tr key={tech.id} className="hover:bg-gray-50/50 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <img src={tech.avatar} alt={tech.name} className="w-10 h-10 rounded-xl object-cover" />
+                      <img
+                        src={tech.avatar ?? "https://images.unsplash.com/photo-1544723795-3fb6469f5b39?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"}
+                        alt={tech.name}
+                        className="w-10 h-10 rounded-xl object-cover"
+                      />
                       <div>
                         <p className="font-bold text-gray-900">{tech.name}</p>
                         <p className="text-xs text-gray-500">ID: T-0{tech.id}</p>
@@ -64,9 +96,7 @@ export const TechniciansPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${
-                        tech.status === "Active" ? "bg-green-500" : tech.status === "On Duty" ? "bg-blue-500" : "bg-gray-400"
-                      }`} />
+                      <div className={`w-2 h-2 rounded-full ${STATUS_DOT[tech.status]}`} />
                       <span className="text-sm font-semibold text-gray-700">{tech.status}</span>
                     </div>
                   </td>
@@ -85,7 +115,13 @@ export const TechniciansPage: React.FC = () => {
                     </button>
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                    Tidak ada teknisi yang ditemukan.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

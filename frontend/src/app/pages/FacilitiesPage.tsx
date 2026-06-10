@@ -1,17 +1,41 @@
 import React from "react";
 import { Building2, Search, Filter, Plus, MoreVertical, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { motion } from "motion/react";
+import { apiFetch } from "../lib/api";
 
-const FACILITIES = [
-  { id: 1, name: "Gedung A (Rektorat)", type: "Administrasi", rooms: 45, status: "Good", maintenance: "12 Mei 2026" },
-  { id: 2, name: "Gedung B (Teknik)", type: "Akademik", rooms: 32, status: "Warning", maintenance: "8 Juni 2026" },
-  { id: 3, name: "Gedung C (Sains)", type: "Laboratorium", rooms: 28, status: "Good", maintenance: "1 Juni 2026" },
-  { id: 4, name: "Gedung D (Ekonomi)", type: "Akademik", rooms: 40, status: "Critical", maintenance: "5 Juni 2026" },
-  { id: 5, name: "Perpustakaan Pusat", type: "Publik", rooms: 12, status: "Good", maintenance: "20 Mei 2026" },
-  { id: 6, name: "Auditorium Utama", type: "Publik", rooms: 4, status: "Good", maintenance: "15 Mei 2026" },
-];
+type FacilityItem = {
+  id: number;
+  name: string;
+  type: string;
+  rooms: number;
+  status: "Good" | "Warning" | "Critical";
+  maintenance: string;
+};
+
+const STATUS_STYLES: Record<FacilityItem["status"], { pill: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
+  Good: { pill: "bg-green-50 text-green-600", icon: CheckCircle2, label: "Normal" },
+  Warning: { pill: "bg-orange-50 text-orange-600", icon: AlertTriangle, label: "Perlu Atensi" },
+  Critical: { pill: "bg-red-50 text-red-600", icon: XCircle, label: "Kritis" },
+};
 
 export const FacilitiesPage: React.FC = () => {
+  const [facilities, setFacilities] = React.useState<FacilityItem[]>([]);
+  const [search, setSearch] = React.useState("");
+
+  React.useEffect(() => {
+    apiFetch<{ data: FacilityItem[] }>("/facilities")
+      .then((response) => setFacilities(response.data))
+      .catch(() => setFacilities([]));
+  }, []);
+
+  const filteredFacilities = facilities.filter((facility) => {
+    const q = search.toLowerCase();
+    return (
+      facility.name.toLowerCase().includes(q) ||
+      facility.type.toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -31,6 +55,8 @@ export const FacilitiesPage: React.FC = () => {
           <input
             type="text"
             placeholder="Cari gedung atau tipe..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
           />
         </div>
@@ -40,63 +66,58 @@ export const FacilitiesPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {FACILITIES.map((fac, i) => (
-          <motion.div
-            key={fac.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:border-blue-200 transition-all group"
-          >
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <Building2 className="w-6 h-6" />
-                </div>
-                <button className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
-                  <MoreVertical className="w-5 h-5 text-gray-400" />
-                </button>
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{fac.name}</h3>
-              <p className="text-sm text-gray-500 mb-4">{fac.type}</p>
-              
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-gray-50 p-3 rounded-2xl">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Ruangan</p>
-                  <p className="text-lg font-bold text-gray-900">{fac.rooms}</p>
-                </div>
-                <div className="bg-gray-50 p-3 rounded-2xl">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Pemeliharaan Terakhir</p>
-                  <p className="text-sm font-bold text-gray-700">{fac.maintenance}</p>
-                </div>
-              </div>
+        {filteredFacilities.length > 0 ? filteredFacilities.map((fac, i) => {
+          const statusStyle = STATUS_STYLES[fac.status] ?? STATUS_STYLES.Good;
+          const Icon = statusStyle.icon;
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {fac.status === "Good" && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 rounded-full text-xs font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Normal
-                    </div>
-                  )}
-                  {fac.status === "Warning" && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-orange-600 rounded-full text-xs font-bold">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      Perlu Atensi
-                    </div>
-                  )}
-                  {fac.status === "Critical" && (
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-full text-xs font-bold">
-                      <XCircle className="w-3.5 h-3.5" />
-                      Kritis
-                    </div>
-                  )}
+          return (
+            <motion.div
+              key={fac.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:border-blue-200 transition-all group"
+            >
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-blue-50 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <button className="p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                    <MoreVertical className="w-5 h-5 text-gray-400" />
+                  </button>
                 </div>
-                <button className="text-sm font-bold text-blue-600 hover:underline">Detail</button>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">{fac.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">{fac.type}</p>
+
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-50 p-3 rounded-2xl">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Ruangan</p>
+                    <p className="text-lg font-bold text-gray-900">{fac.rooms}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-2xl">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Pemeliharaan Terakhir</p>
+                    <p className="text-sm font-bold text-gray-700">{fac.maintenance}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${statusStyle.pill}`}>
+                      <Icon className="w-3.5 h-3.5" />
+                      {statusStyle.label}
+                    </div>
+                  </div>
+                  <button className="text-sm font-bold text-blue-600 hover:underline">Detail</button>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        }) : (
+          <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200">
+            <p className="text-gray-500">Tidak ada fasilitas yang ditemukan.</p>
+          </div>
+        )}
       </div>
     </div>
   );

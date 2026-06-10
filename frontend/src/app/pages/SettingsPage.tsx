@@ -1,17 +1,35 @@
 import React from "react";
-import { 
-  Bell, 
-  Shield, 
-  Database, 
-  Globe, 
-  Lock, 
-  Smartphone, 
+import {
+  Bell,
+  Shield,
+  Database,
+  Globe,
+  Lock,
+  Smartphone,
   Cloud,
   ChevronRight,
-  Info
+  Info,
 } from "lucide-react";
+import { apiFetch } from "../lib/api";
+
+type SettingsResponse = {
+  data: {
+    app_name: string;
+    notification_email: string;
+    auto_assign: boolean;
+    maintenance_mode: boolean;
+  };
+};
 
 export const SettingsPage: React.FC = () => {
+  const [settings, setSettings] = React.useState<SettingsResponse["data"] | null>(null);
+
+  React.useEffect(() => {
+    apiFetch<SettingsResponse>("/settings")
+      .then((response) => setSettings(response.data))
+      .catch(() => setSettings(null));
+  }, []);
+
   const sections = [
     {
       title: "Umum",
@@ -19,7 +37,7 @@ export const SettingsPage: React.FC = () => {
         { icon: Globe, label: "Bahasa & Wilayah", desc: "Indonesia (WIB)", color: "blue" },
         { icon: Bell, label: "Notifikasi Sistem", desc: "Push, Email, WhatsApp", color: "indigo" },
         { icon: Smartphone, label: "Tampilan Mobile", desc: "Optimasi responsif", color: "purple" },
-      ]
+      ],
     },
     {
       title: "Keamanan",
@@ -27,9 +45,18 @@ export const SettingsPage: React.FC = () => {
         { icon: Shield, label: "Kebijakan Akses", desc: "SSO Institusi aktif", color: "green" },
         { icon: Lock, label: "Enkripsi Data", desc: "AES-256 Enabled", color: "orange" },
         { icon: Database, label: "Backup Otomatis", desc: "Harian pukul 02:00", color: "slate" },
-      ]
-    }
+      ],
+    },
   ];
+
+  const colorClasses: Record<string, string> = {
+    blue: "bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white",
+    indigo: "bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white",
+    purple: "bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white",
+    green: "bg-green-50 text-green-600 group-hover:bg-green-600 group-hover:text-white",
+    orange: "bg-orange-50 text-orange-600 group-hover:bg-orange-600 group-hover:text-white",
+    slate: "bg-slate-50 text-slate-600 group-hover:bg-slate-600 group-hover:text-white",
+  };
 
   return (
     <div className="max-w-4xl space-y-8">
@@ -44,7 +71,11 @@ export const SettingsPage: React.FC = () => {
         </div>
         <div className="flex-1 text-center md:text-left">
           <h3 className="text-xl font-bold mb-1">Status Server: Optimal</h3>
-          <p className="text-blue-100 text-sm">Semua layanan berjalan normal. Terakhir diperbarui 2 menit yang lalu.</p>
+          <p className="text-blue-100 text-sm">
+            {settings?.maintenance_mode
+              ? "Mode maintenance aktif."
+              : `Semua layanan berjalan normal. Email notifikasi: ${settings?.notification_email ?? "support@campus-care.test"}.`}
+          </p>
         </div>
         <button className="bg-white text-blue-600 px-6 py-3 rounded-2xl font-bold hover:bg-blue-50 transition-colors">
           Cek Logs
@@ -61,7 +92,7 @@ export const SettingsPage: React.FC = () => {
                   key={i}
                   className="flex items-center gap-4 p-5 bg-white border border-gray-100 rounded-3xl hover:border-blue-200 hover:shadow-md transition-all text-left group"
                 >
-                  <div className={`p-3 bg-${item.color}-50 text-${item.color}-600 rounded-2xl group-hover:bg-${item.color}-600 group-hover:text-white transition-colors`}>
+                  <div className={`p-3 rounded-2xl transition-colors ${colorClasses[item.color]}`}>
                     <item.icon className="w-6 h-6" />
                   </div>
                   <div className="flex-1">
@@ -82,7 +113,9 @@ export const SettingsPage: React.FC = () => {
         </div>
         <div>
           <h5 className="font-bold text-gray-900 text-sm">Informasi Versi</h5>
-          <p className="text-xs text-gray-500 mt-1">Campus Care v2.4.0-stable. Lisensi Institusi aktif hingga Juni 2027.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {settings?.app_name ?? "Campus Care"} v2.4.0-stable. Lisensi Institusi aktif hingga Juni 2027.
+          </p>
         </div>
       </div>
     </div>
