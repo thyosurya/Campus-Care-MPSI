@@ -176,8 +176,8 @@ export const ReportDetail: React.FC = () => {
               </div>
               <div className="flex-1">
                 <p className="text-xs text-gray-400 font-medium mb-1">Teknisi Ditugaskan</p>
-                {role === "admin" && report?.status !== "Completed" && report?.status !== "Cancelled" ? (
-                  <Select value={report?.technician_name ?? ""} onValueChange={assignTechnician} disabled={isUpdating}>
+                {role === "admin" ? (
+                  <Select value={report?.technician_name ?? undefined} onValueChange={assignTechnician} disabled={isUpdating}>
                     <SelectTrigger className="w-full h-8 text-sm">
                       <SelectValue placeholder="Pilih teknisi" />
                     </SelectTrigger>
