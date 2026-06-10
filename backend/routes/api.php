@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', [CampusController::class, 'health']);
 Route::post('/login', [CampusController::class, 'login']);
+Route::post('/register', [CampusController::class, 'register']);
 Route::get('/me', [CampusController::class, 'me']);
 Route::post('/logout', [CampusController::class, 'logout']);
 

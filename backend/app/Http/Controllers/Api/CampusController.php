@@ -55,6 +55,29 @@ class CampusController extends Controller
         ]);
     }
 
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:4'],
+            'role' => ['required', 'in:student,technician,admin'],
+        ]);
+
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'password' => $data['password'],
+            'role' => $data['role'],
+        ]);
+
+        return response()->json([
+            'message' => 'Registrasi berhasil.',
+            'user' => $this->userPayload($user),
+            'token' => $this->tokenForUser($user),
+        ], 201);
+    }
+
     public function me(Request $request): JsonResponse
     {
         $user = $this->userFromRequest($request);

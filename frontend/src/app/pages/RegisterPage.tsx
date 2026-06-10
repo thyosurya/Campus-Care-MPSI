@@ -1,14 +1,15 @@
 import React from "react";
-import { LogIn, Shield, User, Wrench, ArrowRight } from "lucide-react";
+import { UserPlus, Shield, User, Wrench, ArrowRight, LogIn } from "lucide-react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { apiFetch, setStoredAuth } from "../lib/api";
 
-export const LoginPage: React.FC = () => {
+export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = React.useState<string | null>(null);
-  const [email, setEmail] = React.useState("student@campus.test");
+  const [selectedRole, setSelectedRole] = React.useState<"student" | "technician" | "admin">("student");
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("password");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -18,48 +19,44 @@ export const LoginPage: React.FC = () => {
       title: "Mahasiswa",
       desc: "Laporkan kerusakan fasilitas kampus",
       icon: User,
-      color: "blue",
-      path: "/student"
     },
     {
       id: "technician",
       title: "Teknisi",
       desc: "Kelola & perbaiki tugas harian",
       icon: Wrench,
-      color: "indigo",
-      path: "/technician"
     },
     {
       id: "admin",
       title: "Admin",
       desc: "Analisis & pantau seluruh sistem",
       icon: Shield,
-      color: "slate",
-      path: "/admin"
-    }
-  ];
+    },
+  ] as const;
 
-  const demoCredentials: Record<string, { email: string; password: string }> = {
-    student: { email: "student@campus.test", password: "password" },
-    technician: { email: "technician@campus.test", password: "password" },
-    admin: { email: "admin@campus.test", password: "password" },
+  const fillDemo = (role: typeof selectedRole) => {
+    setSelectedRole(role);
+    const stamp = Date.now();
+    const demo = {
+      student: { name: "Budi Santoso", email: `student.${stamp}@campus.test`, password: "password" },
+      technician: { name: "Ahmad Subarjo", email: `technician.${stamp}@campus.test`, password: "password" },
+      admin: { name: "Nina Wijaya", email: `admin.${stamp}@campus.test`, password: "password" },
+    }[role];
+
+    setName(demo.name);
+    setEmail(demo.email);
+    setPassword(demo.password);
   };
 
-  const fillDemoCredentials = (roleId: string) => {
-    setSelectedRole(roleId);
-    const demo = demoCredentials[roleId];
-    if (demo) {
-      setEmail(demo.email);
-      setPassword(demo.password);
-    }
-  };
+  React.useEffect(() => {
+    fillDemo("student");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedRole || isSubmitting) {
-      return;
-    }
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
 
@@ -67,9 +64,10 @@ export const LoginPage: React.FC = () => {
       const response = await apiFetch<{
         token: string;
         user: { id: number; name: string; email: string; role: "student" | "technician" | "admin" };
-      }>("/login", {
+      }>("/register", {
         method: "POST",
         body: JSON.stringify({
+          name,
           email,
           password,
           role: selectedRole,
@@ -77,12 +75,10 @@ export const LoginPage: React.FC = () => {
       });
 
       setStoredAuth(response.token, response.user);
-      toast.success("Login berhasil");
-
-      const role = roles.find((r) => r.id === response.user.role);
-      navigate(role?.path ?? "/student");
+      toast.success("Registrasi berhasil");
+      navigate(`/${response.user.role}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Login gagal");
+      toast.error(error instanceof Error ? error.message : "Registrasi gagal");
     } finally {
       setIsSubmitting(false);
     }
@@ -97,22 +93,22 @@ export const LoginPage: React.FC = () => {
       >
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-blue-200">
-            <LogIn className="w-8 h-8 text-white" />
+            <UserPlus className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Campus Care</h1>
-          <p className="text-gray-500 mt-2 font-medium">Sistem Pelaporan Fasilitas Kampus</p>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Buat Akun</h1>
+          <p className="text-gray-500 mt-2 font-medium">Daftar dulu, lalu login otomatis kalau sukses.</p>
         </div>
 
         <div className="bg-white p-8 rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100">
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleRegister} className="space-y-6">
             <div className="space-y-4">
-              <label className="text-sm font-bold text-gray-700 block ml-1">Masuk Sebagai</label>
+              <label className="text-sm font-bold text-gray-700 block ml-1">Daftar Sebagai</label>
               <div className="grid grid-cols-1 gap-3">
                 {roles.map((role) => (
                   <button
                     key={role.id}
                     type="button"
-                    onClick={() => fillDemoCredentials(role.id)}
+                    onClick={() => fillDemo(role.id)}
                     className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group ${
                       selectedRole === role.id
                         ? "border-blue-600 bg-blue-50/50 ring-4 ring-blue-50"
@@ -134,13 +130,6 @@ export const LoginPage: React.FC = () => {
                       </h4>
                       <p className="text-xs text-gray-500">{role.desc}</p>
                     </div>
-                    {selectedRole === role.id && (
-                      <motion.div layoutId="check" className="ml-auto">
-                        <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-                          <div className="w-2 h-2 bg-white rounded-full" />
-                        </div>
-                      </motion.div>
-                    )}
                   </button>
                 ))}
               </div>
@@ -148,10 +137,21 @@ export const LoginPage: React.FC = () => {
 
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Nama Lengkap</label>
+                <input
+                  type="text"
+                  placeholder="Nama lengkap"
+                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Email Institusi</label>
                 <input
                   type="email"
-                  placeholder="name@university.ac.id"
+                  placeholder="name@campus.ac.id"
                   className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                   required
                   value={email}
@@ -172,40 +172,26 @@ export const LoginPage: React.FC = () => {
             </div>
 
             <button
-              disabled={!selectedRole || isSubmitting}
+              disabled={isSubmitting}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:cursor-not-allowed text-white p-4 rounded-2xl font-bold transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2 group"
             >
-              {isSubmitting ? "Memproses..." : "Masuk Sekarang"}
+              {isSubmitting ? "Mendaftar..." : "Buat Akun"}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
 
           <div className="mt-8 text-center pt-6 border-t border-gray-50">
             <p className="text-sm text-gray-500">
-              Belum punya akun?{" "}
+              Sudah punya akun?{" "}
               <button
                 type="button"
-                onClick={() => navigate("/register")}
-                className="text-blue-600 font-bold hover:underline"
+                onClick={() => navigate("/login")}
+                className="text-blue-600 font-bold hover:underline inline-flex items-center gap-1"
               >
-                Daftar Sekarang
+                <LogIn className="w-4 h-4" />
+                Login
               </button>
             </p>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {roles.map((role) => (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => fillDemoCredentials(role.id)}
-                className="text-left p-3 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/40 transition-all"
-              >
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Demo</p>
-                <p className="font-semibold text-gray-900">{role.title}</p>
-                <p className="text-xs text-gray-500 truncate">{demoCredentials[role.id].email}</p>
-              </button>
-            ))}
           </div>
         </div>
       </motion.div>

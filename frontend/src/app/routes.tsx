@@ -9,6 +9,7 @@ import { ReportDetail } from "./pages/ReportDetail";
 import { ReportList } from "./pages/ReportList";
 import { GenericPage } from "./pages/GenericPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { NotificationPage } from "./pages/NotificationPage";
 import { FacilitiesPage } from "./pages/FacilitiesPage";
@@ -20,6 +21,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     Component: LoginPage,
+  },
+  {
+    path: "/register",
+    Component: RegisterPage,
   },
   {
     path: "/",
