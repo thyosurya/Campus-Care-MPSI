@@ -40,7 +40,16 @@ export const ReportDetail: React.FC = () => {
   const { role } = useOutletContext<{ role: string }>();
   const { id } = useParams();
   const [report, setReport] = useState<ReportDetailData | null>(null);
+  const [technicians, setTechnicians] = useState<{name: string}[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  useEffect(() => {
+    if (role === "admin") {
+      apiFetch<{ data: {name: string}[] }>('/technicians')
+        .then(res => setTechnicians(res.data))
+        .catch(console.error);
+    }
+  }, [role]);
 
   const updateStatus = async (newStatus: string) => {
     if (!id || !report) return;
@@ -53,6 +62,22 @@ export const ReportDetail: React.FC = () => {
       setReport(response.data);
     } catch (error) {
       console.error("Gagal memperbarui status", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const assignTechnician = async (techName: string) => {
+    if (!id || !report) return;
+    setIsUpdating(true);
+    try {
+      const response = await apiFetch<{ data: ReportDetailData }>(`/reports/${report.code}`, {
+        method: "PATCH",
+        body: JSON.stringify({ technician_name: techName, status: report.status === "Pending" ? "Assigned" : report.status }),
+      });
+      setReport(response.data);
+    } catch (error) {
+      console.error("Gagal menugaskan teknisi", error);
     } finally {
       setIsUpdating(false);
     }
@@ -149,9 +174,22 @@ export const ReportDetail: React.FC = () => {
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                 <Wrench className="w-6 h-6" />
               </div>
-              <div>
-                <p className="text-xs text-gray-400 font-medium">Teknisi Ditugaskan</p>
-                <p className="text-sm font-bold">{report?.technician_name ?? "Belum ditugaskan"}</p>
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 font-medium mb-1">Teknisi Ditugaskan</p>
+                {role === "admin" && report?.status !== "Completed" && report?.status !== "Cancelled" ? (
+                  <Select value={report?.technician_name ?? ""} onValueChange={assignTechnician} disabled={isUpdating}>
+                    <SelectTrigger className="w-full h-8 text-sm">
+                      <SelectValue placeholder="Pilih teknisi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {technicians.map((tech) => (
+                        <SelectItem key={tech.name} value={tech.name}>{tech.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-bold">{report?.technician_name ?? "Belum ditugaskan"}</p>
+                )}
               </div>
             </div>
           </div>
